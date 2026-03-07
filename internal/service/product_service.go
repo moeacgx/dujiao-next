@@ -136,14 +136,15 @@ func (s *ProductService) GetPublicBySlug(slug string) (*models.Product, error) {
 }
 
 // ListAdmin 获取后台商品列表
-func (s *ProductService) ListAdmin(categoryID, search, fulfillmentType, manualStockStatus string, page, pageSize int) ([]models.Product, int64, error) {
+func (s *ProductService) ListAdmin(categoryID, search, fulfillmentType, stockStatus string, lowStockThreshold int, page, pageSize int) ([]models.Product, int64, error) {
 	filter := repository.ProductListFilter{
 		Page:              page,
 		PageSize:          pageSize,
 		CategoryID:        categoryID,
 		Search:            search,
 		FulfillmentType:   strings.TrimSpace(fulfillmentType),
-		ManualStockStatus: normalizeManualStockStatus(manualStockStatus),
+		StockStatus:       normalizeStockStatus(stockStatus),
+		LowStockThreshold: lowStockThreshold,
 		OnlyActive:        false,
 		WithCategory:      true,
 	}
@@ -794,7 +795,7 @@ func normalizeFulfillmentType(raw string) string {
 	}
 }
 
-func normalizeManualStockStatus(raw string) string {
+func normalizeStockStatus(raw string) string {
 	value := strings.ToLower(strings.TrimSpace(raw))
 	switch value {
 	case "", "all":

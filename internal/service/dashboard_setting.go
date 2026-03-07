@@ -142,3 +142,17 @@ func (s *SettingService) GetDashboardSetting() (DashboardSetting, error) {
 	}
 	return dashboardSettingFromJSON(value, fallback), nil
 }
+
+// GetDashboardLowStockThreshold 获取低库存阈值（读取失败回退默认值）
+func (s *SettingService) GetDashboardLowStockThreshold() int {
+	defaultThreshold := int(DashboardDefaultSetting().Alert.LowStockThreshold)
+	if s == nil {
+		return defaultThreshold
+	}
+
+	setting, err := s.GetDashboardSetting()
+	if err != nil {
+		return defaultThreshold
+	}
+	return int(setting.Alert.LowStockThreshold)
+}
