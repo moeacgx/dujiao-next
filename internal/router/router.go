@@ -184,6 +184,11 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		{
 			channelAPI.GET("/telegram/config", channelHandler.GetBotConfig)
 			channelAPI.POST("/telegram/heartbeat", channelHandler.ReportHeartbeat)
+
+			// Catalog 端点（商品浏览）
+			channelAPI.GET("/catalog/categories", channelHandler.GetCategories)
+			channelAPI.GET("/catalog/products", channelHandler.GetProducts)
+			channelAPI.GET("/catalog/products/:id", channelHandler.GetProductDetail)
 		}
 
 		apiV1.POST("/payments/callback", publicHandler.PaymentCallback)

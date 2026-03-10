@@ -1,0 +1,263 @@
+package channel
+
+import (
+	"fmt"
+	"math"
+	"net/http"
+	"strconv"
+
+	"github.com/dujiao-next/internal/logger"
+	"github.com/dujiao-next/internal/models"
+
+	"github.com/gin-gonic/gin"
+)
+
+// GetCategories GET /api/v1/channel/catalog/categories?locale=zh-CN
+func (h *Handler) GetCategories(c *gin.Context) {
+	locale := c.DefaultQuery("locale", "zh-CN")
+	defaultLocale := "zh-CN"
+
+	categories, err := h.CategoryService.List()
+	if err != nil {
+		logger.Errorw("channel_catalog_list_categories", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"ok":            false,
+			"error_code":    "internal_error",
+			"error_message": "failed to list categories",
+		})
+		return
+	}
+
+	type categoryItem struct {
+		ID           uint   `json:"id"`
+		Name         string `json:"name"`
+		Icon         string `json:"icon"`
+		Slug         string `json:"slug"`
+		ProductCount int64  `json:"product_count"`
+	}
+
+	var items []categoryItem
+	for _, cat := range categories {
+		count, err := h.CategoryRepo.CountActiveProducts(fmt.Sprintf("%d", cat.ID))
+		if err != nil {
+			logger.Warnw("channel_catalog_count_products", "category_id", cat.ID, "error", err)
+			count = 0
+		}
+		if count == 0 {
+			continue // 跳过无上架商品的分类
+		}
+		items = append(items, categoryItem{
+			ID:           cat.ID,
+			Name:         resolveLocalizedJSON(cat.NameJSON, locale, defaultLocale),
+			Icon:         cat.Icon,
+			Slug:         cat.Slug,
+			ProductCount: count,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"categories": items,
+	})
+}
+
+// GetProducts GET /api/v1/channel/catalog/products?locale=zh-CN&category_id=1&page=1&page_size=5
+func (h *Handler) GetProducts(c *gin.Context) {
+	locale := c.DefaultQuery("locale", "zh-CN")
+	defaultLocale := "zh-CN"
+	categoryID := c.DefaultQuery("category_id", "")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "5"))
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 20 {
+		pageSize = 5
+	}
+
+	products, total, err := h.ProductService.ListPublic(categoryID, "", page, pageSize)
+	if err != nil {
+		logger.Errorw("channel_catalog_list_products", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"ok":            false,
+			"error_code":    "internal_error",
+			"error_message": "failed to list products",
+		})
+		return
+	}
+
+	if err := h.ProductService.ApplyAutoStockCounts(products); err != nil {
+		logger.Warnw("channel_catalog_apply_stock", "error", err)
+	}
+
+	currency, err := h.SettingService.GetSiteCurrency("CNY")
+	if err != nil {
+		logger.Warnw("channel_catalog_get_currency", "error", err)
+		currency = "CNY"
+	}
+
+	type productItem struct {
+		ID           uint   `json:"id"`
+		Title        string `json:"title"`
+		Summary      string `json:"summary"`
+		ImageURL     string `json:"image_url"`
+		PriceFrom    string `json:"price_from"`
+		Currency     string `json:"currency"`
+		StockStatus  string `json:"stock_status"`
+		StockCount   int64  `json:"stock_count"`
+		CategoryName string `json:"category_name"`
+	}
+
+	items := make([]productItem, 0, len(products))
+	for _, p := range products {
+		title := resolveLocalizedJSON(p.TitleJSON, locale, defaultLocale)
+		desc := resolveLocalizedJSON(p.DescriptionJSON, locale, defaultLocale)
+		summary := truncate(stripHTML(desc), 100)
+
+		var imageURL string
+		if len(p.Images) > 0 {
+			imageURL = string(p.Images[0])
+		}
+
+		items = append(items, productItem{
+			ID:           p.ID,
+			Title:        title,
+			Summary:      summary,
+			ImageURL:     imageURL,
+			PriceFrom:    p.PriceAmount.String(),
+			Currency:     currency,
+			StockStatus:  computeStockStatus(p.FulfillmentType, p.AutoStockAvailable, p.ManualStockTotal),
+			StockCount:   computeStockCount(p.FulfillmentType, p.AutoStockAvailable, p.ManualStockTotal),
+			CategoryName: resolveLocalizedJSON(p.Category.NameJSON, locale, defaultLocale),
+		})
+	}
+
+	totalPages := int64(math.Ceil(float64(total) / float64(pageSize)))
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":       true,
+		"products": items,
+		"pagination": gin.H{
+			"page":        page,
+			"page_size":   pageSize,
+			"total":       total,
+			"total_pages": totalPages,
+		},
+	})
+}
+
+// GetProductDetail GET /api/v1/channel/catalog/products/:id?locale=zh-CN
+func (h *Handler) GetProductDetail(c *gin.Context) {
+	locale := c.DefaultQuery("locale", "zh-CN")
+	defaultLocale := "zh-CN"
+	id := c.Param("id")
+
+	product, err := h.ProductRepo.GetByID(id)
+	if err != nil {
+		logger.Errorw("channel_catalog_get_product", "id", id, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"ok":            false,
+			"error_code":    "internal_error",
+			"error_message": "failed to get product",
+		})
+		return
+	}
+	if product == nil || !product.IsActive {
+		c.JSON(http.StatusNotFound, gin.H{
+			"ok":            false,
+			"error_code":    "not_found",
+			"error_message": "product not found",
+		})
+		return
+	}
+
+	// 计算库存（ApplyAutoStockCounts 接受 []models.Product 并修改 slice 元素）
+	stockSlice := []models.Product{*product}
+	if err := h.ProductService.ApplyAutoStockCounts(stockSlice); err != nil {
+		logger.Warnw("channel_catalog_apply_stock_detail", "error", err)
+	}
+	*product = stockSlice[0]
+
+	currency, err := h.SettingService.GetSiteCurrency("CNY")
+	if err != nil {
+		logger.Warnw("channel_catalog_get_currency_detail", "error", err)
+		currency = "CNY"
+	}
+
+	title := resolveLocalizedJSON(product.TitleJSON, locale, defaultLocale)
+	description := stripHTML(resolveLocalizedJSON(product.ContentJSON, locale, defaultLocale))
+
+	var imageURL string
+	if len(product.Images) > 0 {
+		imageURL = string(product.Images[0])
+	}
+
+	type skuItem struct {
+		ID          uint   `json:"id"`
+		SKUCode     string `json:"sku_code"`
+		SpecValues  string `json:"spec_values"`
+		Price       string `json:"price"`
+		StockStatus string `json:"stock_status"`
+		StockCount  int64  `json:"stock_count"`
+	}
+
+	skus := make([]skuItem, 0, len(product.SKUs))
+	for _, sku := range product.SKUs {
+		if !sku.IsActive {
+			continue
+		}
+		specValues := resolveLocalizedJSON(sku.SpecValuesJSON, locale, defaultLocale)
+		skus = append(skus, skuItem{
+			ID:          sku.ID,
+			SKUCode:     sku.SKUCode,
+			SpecValues:  specValues,
+			Price:       sku.PriceAmount.String(),
+			StockStatus: computeStockStatus(product.FulfillmentType, sku.AutoStockAvailable, sku.ManualStockTotal),
+			StockCount:  computeStockCount(product.FulfillmentType, sku.AutoStockAvailable, sku.ManualStockTotal),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok": true,
+		"product": gin.H{
+			"id":               product.ID,
+			"title":            title,
+			"description":      description,
+			"image_url":        imageURL,
+			"price_from":       product.PriceAmount.String(),
+			"currency":         currency,
+			"stock_status":     computeStockStatus(product.FulfillmentType, product.AutoStockAvailable, product.ManualStockTotal),
+			"category_name":    resolveLocalizedJSON(product.Category.NameJSON, locale, defaultLocale),
+			"fulfillment_type": product.FulfillmentType,
+			"skus":             skus,
+		},
+	})
+}
+
+// computeStockCount 计算可用库存数量（-1 表示无限库存）
+func computeStockCount(fulfillmentType string, autoStockAvailable int64, manualStockTotal int) int64 {
+	if fulfillmentType == "auto" {
+		return autoStockAvailable
+	}
+	// manual: -1 表示无限库存
+	return int64(manualStockTotal)
+}
+
+// computeStockStatus 计算库存状态
+func computeStockStatus(fulfillmentType string, autoStockAvailable int64, manualStockTotal int) string {
+	if fulfillmentType == "auto" {
+		if autoStockAvailable > 0 {
+			return "in_stock"
+		}
+		return "out_of_stock"
+	}
+	// manual: -1 表示无限库存
+	if manualStockTotal < 0 {
+		return "in_stock"
+	}
+	if manualStockTotal > 0 {
+		return "in_stock"
+	}
+	return "out_of_stock"
+}

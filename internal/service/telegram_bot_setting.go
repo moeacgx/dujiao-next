@@ -12,13 +12,12 @@ type LocalizedText map[string]string
 
 // TelegramBotConfigSetting Telegram Bot 配置实体（嵌套分组）
 type TelegramBotConfigSetting struct {
-	Enabled       bool                          `json:"enabled"`
-	DefaultLocale string                        `json:"default_locale"`
-	ConfigVersion int                           `json:"config_version"`
-	Basic         TelegramBotBasicConfig        `json:"basic"`
-	Welcome       TelegramBotWelcomeConfig      `json:"welcome"`
-	Announcement  TelegramBotAnnouncementConfig `json:"announcement"`
-	Menu          TelegramBotMenuConfig         `json:"menu"`
+	Enabled       bool                     `json:"enabled"`
+	DefaultLocale string                   `json:"default_locale"`
+	ConfigVersion int                      `json:"config_version"`
+	Basic         TelegramBotBasicConfig   `json:"basic"`
+	Welcome       TelegramBotWelcomeConfig `json:"welcome"`
+	Menu          TelegramBotMenuConfig    `json:"menu"`
 }
 
 // TelegramBotBasicConfig 基本信息分组
@@ -26,23 +25,13 @@ type TelegramBotBasicConfig struct {
 	DisplayName string        `json:"display_name"`
 	Description LocalizedText `json:"description"`
 	SupportURL  string        `json:"support_url"`
-	AvatarURL   string        `json:"avatar_url"`
 	CoverURL    string        `json:"cover_url"`
 }
 
 // TelegramBotWelcomeConfig 欢迎设置分组
 type TelegramBotWelcomeConfig struct {
-	Enabled              bool          `json:"enabled"`
-	Message              LocalizedText `json:"message"`
-	ShowLanguageSelector bool          `json:"show_language_selector"`
-	ShowNotice           bool          `json:"show_notice"`
-}
-
-// TelegramBotAnnouncementConfig 公告设置分组
-type TelegramBotAnnouncementConfig struct {
-	Enabled  bool          `json:"enabled"`
-	Message  LocalizedText `json:"message"`
-	ImageURL string        `json:"image_url"`
+	Enabled bool          `json:"enabled"`
+	Message LocalizedText `json:"message"`
 }
 
 // TelegramBotMenuConfig 菜单配置分组
@@ -88,12 +77,24 @@ func TelegramBotConfigDefault() TelegramBotConfigSetting {
 			Enabled: false,
 			Message: make(LocalizedText),
 		},
-		Announcement: TelegramBotAnnouncementConfig{
-			Enabled: false,
-			Message: make(LocalizedText),
-		},
 		Menu: TelegramBotMenuConfig{
-			Items: []TelegramBotMenuItem{},
+			Items: []TelegramBotMenuItem{
+				{
+					Key: "shop_home", Enabled: true, Order: 1,
+					Label:  LocalizedText{"zh-CN": "🛍️ 开始购物", "zh-TW": "🛍️ 開始購物", "en-US": "🛍️ Shop Now"},
+					Action: TelegramBotMenuAction{Type: "builtin", Value: ""},
+				},
+				{
+					Key: "my_orders", Enabled: true, Order: 2,
+					Label:  LocalizedText{"zh-CN": "📦 我的订单", "zh-TW": "📦 我的訂單", "en-US": "📦 My Orders"},
+					Action: TelegramBotMenuAction{Type: "builtin", Value: ""},
+				},
+				{
+					Key: "help", Enabled: true, Order: 3,
+					Label:  LocalizedText{"zh-CN": "❓ 帮助", "zh-TW": "❓ 幫助", "en-US": "❓ Help"},
+					Action: TelegramBotMenuAction{Type: "builtin", Value: ""},
+				},
+			},
 		},
 	}
 }
@@ -116,19 +117,11 @@ func TelegramBotConfigToMap(setting TelegramBotConfigSetting) map[string]interfa
 			"display_name": strings.TrimSpace(setting.Basic.DisplayName),
 			"description":  localizedTextToMap(setting.Basic.Description),
 			"support_url":  strings.TrimSpace(setting.Basic.SupportURL),
-			"avatar_url":   strings.TrimSpace(setting.Basic.AvatarURL),
 			"cover_url":    strings.TrimSpace(setting.Basic.CoverURL),
 		},
 		"welcome": map[string]interface{}{
-			"enabled":                setting.Welcome.Enabled,
-			"message":                localizedTextToMap(setting.Welcome.Message),
-			"show_language_selector": setting.Welcome.ShowLanguageSelector,
-			"show_notice":            setting.Welcome.ShowNotice,
-		},
-		"announcement": map[string]interface{}{
-			"enabled":   setting.Announcement.Enabled,
-			"message":   localizedTextToMap(setting.Announcement.Message),
-			"image_url": strings.TrimSpace(setting.Announcement.ImageURL),
+			"enabled": setting.Welcome.Enabled,
+			"message": localizedTextToMap(setting.Welcome.Message),
 		},
 		"menu": map[string]interface{}{
 			"items": menuItemsToSlice(setting.Menu.Items),
@@ -146,19 +139,11 @@ func MaskTelegramBotConfigForAdmin(setting TelegramBotConfigSetting) models.JSON
 			"display_name": setting.Basic.DisplayName,
 			"description":  localizedTextToMap(setting.Basic.Description),
 			"support_url":  setting.Basic.SupportURL,
-			"avatar_url":   setting.Basic.AvatarURL,
 			"cover_url":    setting.Basic.CoverURL,
 		},
 		"welcome": map[string]interface{}{
-			"enabled":                setting.Welcome.Enabled,
-			"message":                localizedTextToMap(setting.Welcome.Message),
-			"show_language_selector": setting.Welcome.ShowLanguageSelector,
-			"show_notice":            setting.Welcome.ShowNotice,
-		},
-		"announcement": map[string]interface{}{
-			"enabled":   setting.Announcement.Enabled,
-			"message":   localizedTextToMap(setting.Announcement.Message),
-			"image_url": setting.Announcement.ImageURL,
+			"enabled": setting.Welcome.Enabled,
+			"message": localizedTextToMap(setting.Welcome.Message),
 		},
 		"menu": map[string]interface{}{
 			"items": menuItemsToSlice(setting.Menu.Items),
@@ -177,19 +162,11 @@ func SerializeTelegramBotConfigForChannel(setting TelegramBotConfigSetting, botT
 			"display_name": setting.Basic.DisplayName,
 			"description":  localizedTextToMap(setting.Basic.Description),
 			"support_url":  setting.Basic.SupportURL,
-			"avatar_url":   setting.Basic.AvatarURL,
 			"cover_url":    setting.Basic.CoverURL,
 		},
 		"welcome": map[string]interface{}{
-			"enabled":                setting.Welcome.Enabled,
-			"message":                localizedTextToMap(setting.Welcome.Message),
-			"show_language_selector": setting.Welcome.ShowLanguageSelector,
-			"show_notice":            setting.Welcome.ShowNotice,
-		},
-		"announcement": map[string]interface{}{
-			"enabled":   setting.Announcement.Enabled,
-			"message":   localizedTextToMap(setting.Announcement.Message),
-			"image_url": setting.Announcement.ImageURL,
+			"enabled": setting.Welcome.Enabled,
+			"message": localizedTextToMap(setting.Welcome.Message),
 		},
 		"menu": map[string]interface{}{
 			"items": menuItemsToSlice(setting.Menu.Items),
@@ -240,21 +217,12 @@ func telegramBotConfigFromJSON(raw models.JSON, fallback TelegramBotConfigSettin
 		next.Basic.DisplayName = readString(basicRaw, "display_name", next.Basic.DisplayName)
 		next.Basic.Description = readLocalizedText(basicRaw, "description", next.Basic.Description)
 		next.Basic.SupportURL = readString(basicRaw, "support_url", next.Basic.SupportURL)
-		next.Basic.AvatarURL = readString(basicRaw, "avatar_url", next.Basic.AvatarURL)
 		next.Basic.CoverURL = readString(basicRaw, "cover_url", next.Basic.CoverURL)
 	}
 
 	if welcomeRaw, ok := raw["welcome"].(map[string]interface{}); ok {
 		next.Welcome.Enabled = readBool(welcomeRaw, "enabled", next.Welcome.Enabled)
 		next.Welcome.Message = readLocalizedText(welcomeRaw, "message", next.Welcome.Message)
-		next.Welcome.ShowLanguageSelector = readBool(welcomeRaw, "show_language_selector", next.Welcome.ShowLanguageSelector)
-		next.Welcome.ShowNotice = readBool(welcomeRaw, "show_notice", next.Welcome.ShowNotice)
-	}
-
-	if announcementRaw, ok := raw["announcement"].(map[string]interface{}); ok {
-		next.Announcement.Enabled = readBool(announcementRaw, "enabled", next.Announcement.Enabled)
-		next.Announcement.Message = readLocalizedText(announcementRaw, "message", next.Announcement.Message)
-		next.Announcement.ImageURL = readString(announcementRaw, "image_url", next.Announcement.ImageURL)
 	}
 
 	if menuRaw, ok := raw["menu"].(map[string]interface{}); ok {
@@ -277,20 +245,12 @@ func migrateOldTelegramBotConfig(raw models.JSON, fallback TelegramBotConfigSett
 		next.Basic.Description = LocalizedText{defaultLocale: oldDescription}
 	}
 	next.Basic.SupportURL = readString(raw, "support_link", "")
-	next.Basic.AvatarURL = readString(raw, "avatar_url", "")
 	next.Basic.CoverURL = readString(raw, "welcome_cover_url", "")
 
 	oldWelcomeMessage := readString(raw, "welcome_message", "")
 	if oldWelcomeMessage != "" {
 		next.Welcome.Enabled = true
 		next.Welcome.Message = LocalizedText{defaultLocale: oldWelcomeMessage}
-	}
-
-	oldAnnouncement := readString(raw, "announcement", "")
-	announcementOn := readBool(raw, "announcement_on", false)
-	if oldAnnouncement != "" {
-		next.Announcement.Enabled = announcementOn
-		next.Announcement.Message = LocalizedText{defaultLocale: oldAnnouncement}
 	}
 
 	return next
@@ -316,7 +276,6 @@ func normalizeTelegramBotConfig(raw models.JSON) map[string]interface{} {
 	// 归一化多语言字段：确保所有支持的语言键都存在
 	setting.Basic.Description = normalizeLocalizedText(setting.Basic.Description)
 	setting.Welcome.Message = normalizeLocalizedText(setting.Welcome.Message)
-	setting.Announcement.Message = normalizeLocalizedText(setting.Announcement.Message)
 	setting.Menu.Items = normalizeMenuItems(setting.Menu.Items)
 	return TelegramBotConfigToMap(setting)
 }
@@ -348,7 +307,6 @@ func (s *SettingService) UpdateTelegramBotConfig(cfg TelegramBotConfigSetting) (
 	// 归一化多语言字段
 	cfg.Basic.Description = normalizeLocalizedText(cfg.Basic.Description)
 	cfg.Welcome.Message = normalizeLocalizedText(cfg.Welcome.Message)
-	cfg.Announcement.Message = normalizeLocalizedText(cfg.Announcement.Message)
 	cfg.Menu.Items = normalizeMenuItems(cfg.Menu.Items)
 
 	if _, err := s.Update(constants.SettingKeyTelegramBotConfig, TelegramBotConfigToMap(cfg)); err != nil {

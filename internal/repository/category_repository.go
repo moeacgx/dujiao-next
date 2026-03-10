@@ -17,6 +17,7 @@ type CategoryRepository interface {
 	Delete(id string) error
 	CountBySlug(slug string, excludeID *string) (int64, error)
 	CountProducts(categoryID string) (int64, error)
+	CountActiveProducts(categoryID string) (int64, error)
 }
 
 // GormCategoryRepository GORM 实现
@@ -82,6 +83,15 @@ func (r *GormCategoryRepository) CountBySlug(slug string, excludeID *string) (in
 func (r *GormCategoryRepository) CountProducts(categoryID string) (int64, error) {
 	var count int64
 	if err := r.db.Model(&models.Product{}).Where("category_id = ?", categoryID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// CountActiveProducts 统计某分类下已上架商品数
+func (r *GormCategoryRepository) CountActiveProducts(categoryID string) (int64, error) {
+	var count int64
+	if err := r.db.Model(&models.Product{}).Where("category_id = ? AND is_active = ?", categoryID, true).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil
