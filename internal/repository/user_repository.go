@@ -84,7 +84,18 @@ func (r *GormUserRepository) List(filter UserListFilter) ([]models.User, int64, 
 
 	if filter.Keyword != "" {
 		like := "%" + filter.Keyword + "%"
-		query = query.Where("email LIKE ? OR display_name LIKE ?", like, like)
+		query = query.Where(
+			"email LIKE ? OR display_name LIKE ? OR EXISTS ("+
+				"SELECT 1 FROM user_oauth_identities "+
+				"WHERE user_oauth_identities.user_id = users.id "+
+				"AND ("+
+				"user_oauth_identities.provider LIKE ? OR "+
+				"user_oauth_identities.provider_user_id LIKE ? OR "+
+				"user_oauth_identities.username LIKE ?"+
+				")"+
+				")",
+			like, like, like, like, like,
+		)
 	}
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)

@@ -50,6 +50,7 @@ type OrderListFilter struct {
 	Page        int
 	PageSize    int
 	UserID      uint
+	UserKeyword string
 	Status      string
 	OrderNo     string
 	GuestEmail  string

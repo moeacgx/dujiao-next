@@ -193,6 +193,27 @@ func (r *GormOrderRepository) ListAdmin(filter OrderListFilter) ([]models.Order,
 	if filter.UserID != 0 {
 		query = query.Where("user_id = ?", filter.UserID)
 	}
+	if keyword := strings.TrimSpace(filter.UserKeyword); keyword != "" {
+		like := "%" + keyword + "%"
+		query = query.Where(
+			"user_id IN ("+
+				"SELECT users.id FROM users "+
+				"WHERE users.deleted_at IS NULL AND ("+
+				"users.email LIKE ? OR "+
+				"users.display_name LIKE ? OR "+
+				"EXISTS ("+
+				"SELECT 1 FROM user_oauth_identities "+
+				"WHERE user_oauth_identities.user_id = users.id AND ("+
+				"user_oauth_identities.provider LIKE ? OR "+
+				"user_oauth_identities.provider_user_id LIKE ? OR "+
+				"user_oauth_identities.username LIKE ?"+
+				")"+
+				")"+
+				")"+
+				")",
+			like, like, like, like, like,
+		)
+	}
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
 	}

@@ -69,6 +69,9 @@ func (s *EmailService) SendCustomEmail(toEmail, subject, body string) error {
 }
 
 func (s *EmailService) sendTextEmail(toEmail, subject, body string) error {
+	if isTelegramPlaceholderEmail(toEmail) {
+		return nil
+	}
 	if s.cfg == nil || !s.cfg.Enabled {
 		return ErrEmailServiceDisabled
 	}

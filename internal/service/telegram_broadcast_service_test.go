@@ -68,6 +68,10 @@ func (r *telegramUserRepoStub) GetByUserProvider(userID uint, provider string) (
 	return nil, nil
 }
 
+func (r *telegramUserRepoStub) ListByUserID(userID uint) ([]models.UserOAuthIdentity, error) {
+	return []models.UserOAuthIdentity{}, nil
+}
+
 func (r *telegramUserRepoStub) ListTelegramUsers(filter repository.TelegramUserListFilter) ([]repository.TelegramUserListItem, int64, error) {
 	result := make([]repository.TelegramUserListItem, 0, len(r.items))
 	allowed := map[uint]struct{}{}

@@ -59,10 +59,22 @@ type AdminUserListItem struct {
 	WalletBalance models.Money `json:"wallet_balance"`
 }
 
+// AdminUserOAuthIdentityItem 管理端用户第三方身份项
+type AdminUserOAuthIdentityItem struct {
+	ID             uint       `json:"id"`
+	Provider       string     `json:"provider"`
+	ProviderUserID string     `json:"provider_user_id"`
+	Username       string     `json:"username"`
+	AvatarURL      string     `json:"avatar_url"`
+	AuthAt         *time.Time `json:"auth_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
 // AdminUserDetail 管理端用户详情
 type AdminUserDetail struct {
 	models.User
-	WalletBalance models.Money `json:"wallet_balance"`
+	WalletBalance   models.Money                 `json:"wallet_balance"`
+	OAuthIdentities []AdminUserOAuthIdentityItem `json:"oauth_identities"`
 }
 
 // GetAdminUsers 获取用户列表
@@ -161,9 +173,27 @@ func (h *Handler) GetAdminUser(c *gin.Context) {
 		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
+	identities, err := h.UserOAuthIdentityRepo.ListByUserID(user.ID)
+	if err != nil {
+		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		return
+	}
+	oauthItems := make([]AdminUserOAuthIdentityItem, 0, len(identities))
+	for _, identity := range identities {
+		oauthItems = append(oauthItems, AdminUserOAuthIdentityItem{
+			ID:             identity.ID,
+			Provider:       identity.Provider,
+			ProviderUserID: identity.ProviderUserID,
+			Username:       identity.Username,
+			AvatarURL:      identity.AvatarURL,
+			AuthAt:         identity.AuthAt,
+			CreatedAt:      identity.CreatedAt,
+		})
+	}
 	response.Success(c, AdminUserDetail{
-		User:          *user,
-		WalletBalance: account.Balance,
+		User:            *user,
+		WalletBalance:   account.Balance,
+		OAuthIdentities: oauthItems,
 	})
 }
 

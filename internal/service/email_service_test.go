@@ -182,3 +182,10 @@ func TestNormalizeEmailSendError(t *testing.T) {
 		t.Fatalf("normalizeEmailSendError(nil) should be nil, got %v", got)
 	}
 }
+
+func TestSendTextEmailSkipTelegramPlaceholder(t *testing.T) {
+	service := &EmailService{}
+	if err := service.sendTextEmail("telegram_6059928735@login.local", "subject", "body"); err != nil {
+		t.Fatalf("sendTextEmail() should skip telegram placeholder email, got %v", err)
+	}
+}

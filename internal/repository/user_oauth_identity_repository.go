@@ -38,6 +38,7 @@ type TelegramUserListItem struct {
 type UserOAuthIdentityRepository interface {
 	GetByProviderUserID(provider, providerUserID string) (*models.UserOAuthIdentity, error)
 	GetByUserProvider(userID uint, provider string) (*models.UserOAuthIdentity, error)
+	ListByUserID(userID uint) ([]models.UserOAuthIdentity, error)
 	ListTelegramUsers(filter TelegramUserListFilter) ([]TelegramUserListItem, int64, error)
 	Create(identity *models.UserOAuthIdentity) error
 	Update(identity *models.UserOAuthIdentity) error
@@ -94,6 +95,18 @@ func (r *GormUserOAuthIdentityRepository) GetByUserProvider(userID uint, provide
 		return nil, err
 	}
 	return &identity, nil
+}
+
+// ListByUserID 查询用户全部第三方绑定。
+func (r *GormUserOAuthIdentityRepository) ListByUserID(userID uint) ([]models.UserOAuthIdentity, error) {
+	if userID == 0 {
+		return []models.UserOAuthIdentity{}, nil
+	}
+	var identities []models.UserOAuthIdentity
+	if err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&identities).Error; err != nil {
+		return nil, err
+	}
+	return identities, nil
 }
 
 // ListTelegramUsers 查询 Telegram 用户候选列表。
