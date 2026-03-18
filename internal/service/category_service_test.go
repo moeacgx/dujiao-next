@@ -140,3 +140,35 @@ func TestCategoryServiceDeleteRejectsCategoriesWithChildrenOrProducts(t *testing
 		t.Fatalf("expected ErrCategoryInUse for category with products, got %v", err)
 	}
 }
+
+func TestCategoryServiceListSortOrderDescending(t *testing.T) {
+	svc, db := newCategoryServiceForTest(t)
+
+	high := models.Category{
+		Slug:      "high",
+		NameJSON:  models.JSON{"zh-CN": "high"},
+		SortOrder: 100,
+	}
+	low := models.Category{
+		Slug:      "low",
+		NameJSON:  models.JSON{"zh-CN": "low"},
+		SortOrder: 1,
+	}
+	if err := db.Create(&high).Error; err != nil {
+		t.Fatalf("create high sort category failed: %v", err)
+	}
+	if err := db.Create(&low).Error; err != nil {
+		t.Fatalf("create low sort category failed: %v", err)
+	}
+
+	rows, err := svc.List()
+	if err != nil {
+		t.Fatalf("list categories failed: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(rows))
+	}
+	if rows[0].Slug != "high" || rows[1].Slug != "low" {
+		t.Fatalf("expected high sort_order first, got %s then %s", rows[0].Slug, rows[1].Slug)
+	}
+}

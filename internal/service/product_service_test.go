@@ -88,7 +88,7 @@ func TestSyncSingleProductSKU_MultipleRowsKeepsSingleActive(t *testing.T) {
 		}
 		activeCount++
 		if sku.ID != firstActive.ID {
-			t.Fatalf("expected first active sku id=%d, got id=%d", firstActive.ID, sku.ID)
+			t.Fatalf("expected higher sort_order active sku id=%d, got id=%d", firstActive.ID, sku.ID)
 		}
 		if !sku.PriceAmount.Equal(targetPrice) {
 			t.Fatalf("expected price %s, got %s", targetPrice.StringFixed(2), sku.PriceAmount.String())
@@ -376,6 +376,100 @@ func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 	})
 	if err != ErrProductCategoryInvalid {
 		t.Fatalf("expected ErrProductCategoryInvalid, got %v", err)
+	}
+}
+
+func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
+	svc, db := newProductServiceForTest(t)
+
+	high := models.Product{
+		CategoryID:  1,
+		Slug:        "high-sort-product",
+		TitleJSON:   models.JSON{"zh-CN": "high"},
+		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		IsActive:    true,
+		SortOrder:   100,
+	}
+	low := models.Product{
+		CategoryID:  1,
+		Slug:        "low-sort-product",
+		TitleJSON:   models.JSON{"zh-CN": "low"},
+		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		IsActive:    true,
+		SortOrder:   1,
+	}
+	if err := db.Create(&high).Error; err != nil {
+		t.Fatalf("create high sort product failed: %v", err)
+	}
+	if err := db.Create(&low).Error; err != nil {
+		t.Fatalf("create low sort product failed: %v", err)
+	}
+
+	rows, total, err := svc.ListPublic("", "", 1, 20)
+	if err != nil {
+		t.Fatalf("list public products failed: %v", err)
+	}
+	if total != 2 {
+		t.Fatalf("expected total=2, got %d", total)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 products, got %d", len(rows))
+	}
+	if rows[0].Slug != "high-sort-product" || rows[1].Slug != "low-sort-product" {
+		t.Fatalf("expected high sort_order first, got %s then %s", rows[0].Slug, rows[1].Slug)
+	}
+}
+
+func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
+	svc, db := newProductServiceForTest(t)
+
+	product := models.Product{
+		CategoryID:  1,
+		Slug:        "sku-order-product",
+		TitleJSON:   models.JSON{"zh-CN": "sku-order-product"},
+		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		IsActive:    true,
+		SortOrder:   0,
+	}
+	if err := db.Create(&product).Error; err != nil {
+		t.Fatalf("create product failed: %v", err)
+	}
+
+	high := models.ProductSKU{
+		ProductID:      product.ID,
+		SKUCode:        "HIGH",
+		SpecValuesJSON: models.JSON{},
+		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		IsActive:       true,
+		SortOrder:      100,
+	}
+	low := models.ProductSKU{
+		ProductID:      product.ID,
+		SKUCode:        "LOW",
+		SpecValuesJSON: models.JSON{},
+		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		IsActive:       true,
+		SortOrder:      1,
+	}
+	if err := db.Create(&high).Error; err != nil {
+		t.Fatalf("create high sort sku failed: %v", err)
+	}
+	if err := db.Create(&low).Error; err != nil {
+		t.Fatalf("create low sort sku failed: %v", err)
+	}
+
+	rows, total, err := svc.ListPublic("", "", 1, 20)
+	if err != nil {
+		t.Fatalf("list public products failed: %v", err)
+	}
+	if total != 1 || len(rows) != 1 {
+		t.Fatalf("expected exactly 1 product, total=%d len=%d", total, len(rows))
+	}
+	if len(rows[0].SKUs) != 2 {
+		t.Fatalf("expected 2 skus, got %d", len(rows[0].SKUs))
+	}
+	if rows[0].SKUs[0].SKUCode != "HIGH" || rows[0].SKUs[1].SKUCode != "LOW" {
+		t.Fatalf("expected high sort_order sku first, got %s then %s", rows[0].SKUs[0].SKUCode, rows[0].SKUs[1].SKUCode)
 	}
 }
 

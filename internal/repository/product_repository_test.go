@@ -242,3 +242,48 @@ func TestListManualStockStatusUsesActiveSKURemaining(t *testing.T) {
 		lowByFallback.Slug:       false,
 	})
 }
+
+func TestProductRepositoryListSortOrderDescending(t *testing.T) {
+	repo, _ := setupProductRepositoryTest(t)
+
+	high := &models.Product{
+		CategoryID:  1,
+		Slug:        "high-sort-product",
+		TitleJSON:   models.JSON{"zh-CN": "high"},
+		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		IsActive:    true,
+		SortOrder:   100,
+	}
+	low := &models.Product{
+		CategoryID:  1,
+		Slug:        "low-sort-product",
+		TitleJSON:   models.JSON{"zh-CN": "low"},
+		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		IsActive:    true,
+		SortOrder:   1,
+	}
+	if err := repo.Create(high); err != nil {
+		t.Fatalf("create high sort product failed: %v", err)
+	}
+	if err := repo.Create(low); err != nil {
+		t.Fatalf("create low sort product failed: %v", err)
+	}
+
+	rows, total, err := repo.List(ProductListFilter{
+		Page:       1,
+		PageSize:   20,
+		OnlyActive: true,
+	})
+	if err != nil {
+		t.Fatalf("list products failed: %v", err)
+	}
+	if total != 2 {
+		t.Fatalf("expected total=2, got %d", total)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 products, got %d", len(rows))
+	}
+	if rows[0].Slug != "high-sort-product" || rows[1].Slug != "low-sort-product" {
+		t.Fatalf("expected high sort_order first, got %s then %s", rows[0].Slug, rows[1].Slug)
+	}
+}
