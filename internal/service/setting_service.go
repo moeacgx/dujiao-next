@@ -86,6 +86,44 @@ func (s *SettingService) GetOrderPaymentExpireMinutes(defaultValue int) (int, er
 	return minutes, nil
 }
 
+// GetRegistrationEnabled 获取注册开关
+func (s *SettingService) GetRegistrationEnabled(defaultValue bool) (bool, error) {
+	if s == nil {
+		return defaultValue, nil
+	}
+	value, err := s.GetByKey(constants.SettingKeyRegistrationConfig)
+	if err != nil {
+		return defaultValue, err
+	}
+	if value == nil {
+		return defaultValue, nil
+	}
+	raw, ok := value[constants.SettingFieldRegistrationEnabled]
+	if !ok {
+		return defaultValue, nil
+	}
+	return parseSettingBool(raw), nil
+}
+
+// GetEmailVerificationEnabled 获取邮箱验证开关
+func (s *SettingService) GetEmailVerificationEnabled(defaultValue bool) (bool, error) {
+	if s == nil {
+		return defaultValue, nil
+	}
+	value, err := s.GetByKey(constants.SettingKeyRegistrationConfig)
+	if err != nil {
+		return defaultValue, err
+	}
+	if value == nil {
+		return defaultValue, nil
+	}
+	raw, ok := value[constants.SettingFieldEmailVerificationEnabled]
+	if !ok {
+		return defaultValue, nil
+	}
+	return parseSettingBool(raw), nil
+}
+
 // GetSiteCurrency 获取站点币种配置
 func (s *SettingService) GetSiteCurrency(defaultValue string) (string, error) {
 	fallback := normalizeSiteCurrency(defaultValue)

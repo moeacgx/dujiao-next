@@ -169,7 +169,7 @@ func (s *UserAuthService) SendVerifyCode(email, purpose, locale string) error {
 }
 
 // Register 用户注册
-func (s *UserAuthService) Register(email, password, code string, agreementAccepted bool) (*models.User, string, time.Time, error) {
+func (s *UserAuthService) Register(email, password, code string, agreementAccepted bool, emailVerificationEnabled bool) (*models.User, string, time.Time, error) {
 	if !agreementAccepted {
 		return nil, "", time.Time{}, ErrAgreementRequired
 	}
@@ -189,8 +189,10 @@ func (s *UserAuthService) Register(email, password, code string, agreementAccept
 		return nil, "", time.Time{}, ErrEmailExists
 	}
 
-	if _, err := s.verifyCode(normalized, constants.VerifyPurposeRegister, code); err != nil {
-		return nil, "", time.Time{}, err
+	if emailVerificationEnabled {
+		if _, err := s.verifyCode(normalized, constants.VerifyPurposeRegister, code); err != nil {
+			return nil, "", time.Time{}, err
+		}
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

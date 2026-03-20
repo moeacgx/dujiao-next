@@ -157,4 +157,5 @@ var (
 	ErrTelegramBroadcastNotFound       = errors.New("telegram broadcast not found")
 	ErrTelegramBroadcastNoRecipients   = errors.New("telegram broadcast no recipients")
 	ErrTelegramBotTokenUnavailable     = errors.New("telegram bot token unavailable")
+	ErrRegistrationDisabled            = errors.New("registration disabled")
 )

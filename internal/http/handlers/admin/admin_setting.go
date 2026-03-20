@@ -51,5 +51,8 @@ func (h *Handler) UpdateSettings(c *gin.Context) {
 	if req.Key == constants.SettingKeySiteConfig {
 		_ = cache.Del(c.Request.Context(), publicConfigCacheKey)
 	}
+	if req.Key == constants.SettingKeyRegistrationConfig {
+		_ = cache.Del(c.Request.Context(), publicConfigCacheKey)
+	}
 	response.Success(c, value)
 }

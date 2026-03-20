@@ -31,6 +31,20 @@ func (h *Handler) SendUserVerifyCode(c *gin.Context) {
 	}
 
 	purpose := strings.ToLower(strings.TrimSpace(req.Purpose))
+
+	// 当 purpose 为 register 时，检查注册是否开启
+	if purpose == constants.VerifyPurposeRegister {
+		registrationEnabled, err := h.SettingService.GetRegistrationEnabled(true)
+		if err != nil {
+			shared.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
+			return
+		}
+		if !registrationEnabled {
+			shared.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
+			return
+		}
+	}
+
 	captchaScene := ""
 	switch purpose {
 	case constants.VerifyPurposeRegister:
@@ -88,7 +102,7 @@ func (h *Handler) SendUserVerifyCode(c *gin.Context) {
 type UserRegisterRequest struct {
 	Email             string `json:"email" binding:"required"`
 	Password          string `json:"password" binding:"required"`
-	Code              string `json:"code" binding:"required"`
+	Code              string `json:"code"`
 	AgreementAccepted bool   `json:"agreement_accepted"`
 }
 
@@ -100,7 +114,25 @@ func (h *Handler) UserRegister(c *gin.Context) {
 		return
 	}
 
-	user, token, expiresAt, err := h.UserAuthService.Register(req.Email, req.Password, req.Code, req.AgreementAccepted)
+	// 检查注册是否开启
+	registrationEnabled, err := h.SettingService.GetRegistrationEnabled(true)
+	if err != nil {
+		shared.RespondError(c, response.CodeInternal, "error.register_failed", err)
+		return
+	}
+	if !registrationEnabled {
+		shared.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
+		return
+	}
+
+	// 检查邮箱验证开关
+	emailVerificationEnabled, err := h.SettingService.GetEmailVerificationEnabled(true)
+	if err != nil {
+		shared.RespondError(c, response.CodeInternal, "error.register_failed", err)
+		return
+	}
+
+	user, token, expiresAt, err := h.UserAuthService.Register(req.Email, req.Password, req.Code, req.AgreementAccepted, emailVerificationEnabled)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidEmail):

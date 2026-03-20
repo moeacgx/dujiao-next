@@ -42,6 +42,8 @@ func normalizeSettingValueByKey(key string, value map[string]interface{}) models
 		return normalizeAffiliateSettingMap(value)
 	case constants.SettingKeyTelegramBotConfig:
 		return normalizeTelegramBotConfig(models.JSON(value))
+	case constants.SettingKeyRegistrationConfig:
+		return normalizeRegistrationSetting(value)
 	default:
 		return models.JSON(value)
 	}
@@ -327,4 +329,22 @@ func normalizeSiteLanguages(raw interface{}) []string {
 		return append([]string(nil), settingSupportedLanguages...)
 	}
 	return result
+}
+
+// normalizeRegistrationSetting 归一化注册配置。
+func normalizeRegistrationSetting(value map[string]interface{}) models.JSON {
+	normalized := make(models.JSON, 2)
+	registrationEnabled := true
+	if raw, ok := value[constants.SettingFieldRegistrationEnabled]; ok {
+		registrationEnabled = parseSettingBool(raw)
+	}
+	normalized[constants.SettingFieldRegistrationEnabled] = registrationEnabled
+
+	emailVerificationEnabled := true
+	if raw, ok := value[constants.SettingFieldEmailVerificationEnabled]; ok {
+		emailVerificationEnabled = parseSettingBool(raw)
+	}
+	normalized[constants.SettingFieldEmailVerificationEnabled] = emailVerificationEnabled
+
+	return normalized
 }

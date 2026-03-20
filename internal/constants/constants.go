@@ -377,6 +377,10 @@ const (
 	SettingKeyTelegramBotRuntimeStatus = "telegram_bot_runtime_status"
 	SettingFieldSiteCurrency           = "currency"
 	SettingFieldPaymentExpireMinutes   = "payment_expire_minutes"
+
+	SettingKeyRegistrationConfig         = "registration_config"
+	SettingFieldRegistrationEnabled      = "registration_enabled"
+	SettingFieldEmailVerificationEnabled = "email_verification_enabled"
 )
 
 // 币种常量

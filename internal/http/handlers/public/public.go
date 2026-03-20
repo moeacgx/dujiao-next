@@ -139,6 +139,12 @@ func (h *Handler) GetConfig(c *gin.Context) {
 	}
 	data["affiliate"] = service.AffiliateSettingToMap(affiliateSetting)
 
+	// 注册配置
+	registrationEnabled, _ := h.SettingService.GetRegistrationEnabled(true)
+	emailVerificationEnabled, _ := h.SettingService.GetEmailVerificationEnabled(true)
+	data["registration_enabled"] = registrationEnabled
+	data["email_verification_enabled"] = emailVerificationEnabled
+
 	_ = cache.SetJSON(c.Request.Context(), publicConfigCacheKey, data, publicConfigCacheTTL)
 	data["server_time"] = time.Now().UnixMilli()
 	response.Success(c, data)
