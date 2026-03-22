@@ -1,6 +1,7 @@
 package epay
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/md5"
@@ -240,6 +241,10 @@ func createV1(ctx context.Context, cfg *Config, input CreateInput, payType strin
 	if err != nil {
 		return nil, ErrRequestFailed
 	}
+	respBytes, err = normalizeResponseBody(respBytes)
+	if err != nil {
+		return nil, ErrResponseInvalid
+	}
 
 	var raw map[string]interface{}
 	_ = json.Unmarshal(respBytes, &raw)
@@ -353,6 +358,10 @@ func createV2(ctx context.Context, cfg *Config, input CreateInput, payType strin
 	respBytes, err := postForm(ctx, endpoint, params)
 	if err != nil {
 		return nil, ErrRequestFailed
+	}
+	respBytes, err = normalizeResponseBody(respBytes)
+	if err != nil {
+		return nil, ErrResponseInvalid
 	}
 
 	var raw map[string]interface{}
@@ -484,6 +493,7 @@ func postForm(ctx context.Context, endpoint string, params map[string]string) ([
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Accept-Encoding", "identity")
 	req.Header.Set("Accept-Language", epayHeaderAcceptLanguage)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -500,6 +510,23 @@ func postForm(ctx context.Context, endpoint string, params map[string]string) ([
 		return nil, err
 	}
 	return body, nil
+}
+
+// normalizeResponseBody 兼容部分网关返回顶层 string 的双重编码 JSON。
+func normalizeResponseBody(body []byte) ([]byte, error) {
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) == 0 {
+		return trimmed, nil
+	}
+	if trimmed[0] != '"' {
+		return trimmed, nil
+	}
+
+	var inner string
+	if err := json.Unmarshal(trimmed, &inner); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSpace([]byte(inner)), nil
 }
 
 func buildSignContent(params map[string]string) string {
