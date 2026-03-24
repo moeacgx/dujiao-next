@@ -200,7 +200,7 @@ func (s *SiteConnectionService) Ping(id uint) (*upstream.PingResult, error) {
 		return nil, err
 	}
 
-	adapter := upstream.NewDujiaoNextAdapter(&models.SiteConnection{
+	adapter, err := upstream.NewAdapter(&models.SiteConnection{
 		BaseURL:   conn.BaseURL,
 		ApiKey:    conn.ApiKey,
 		ApiSecret: decrypted,
