@@ -540,7 +540,7 @@ func (r *GormDashboardRepository) GetTopProducts(startAt, endAt time.Time, limit
 			COUNT(DISTINCT order_items.order_id) as paid_orders,
 			COALESCE(SUM(order_items.quantity), 0) as quantity,
 			COALESCE(SUM(order_items.total_price - order_items.coupon_discount - order_items.promotion_discount), 0) as paid_amount,
-			COALESCE(SUM(order_items.cost_price * order_items.quantity), 0) as total_cost
+			COALESCE(SUM(CASE WHEN order_items.cost_price > 0 THEN order_items.cost_price * order_items.quantity ELSE 0 END), 0) as total_cost
 		`, titleExpr)).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
 		Where("orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
@@ -726,7 +726,7 @@ func (r *GormDashboardRepository) GetProfitOverview(startAt, endAt time.Time) (D
 			COALESCE(SUM(order_items.cost_price * order_items.quantity), 0) as total_cost
 		`).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
-		Where("orders.parent_id IS NULL AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
+		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
 		Scan(&result).Error; err != nil {
 		return result, err
 	}
@@ -749,7 +749,7 @@ func (r *GormDashboardRepository) GetProfitTrends(startAt, endAt time.Time) ([]D
 			(order_items.cost_price * order_items.quantity) as cost
 		`).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
-		Where("orders.parent_id IS NULL AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
+		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
 		Order("orders.created_at asc").
 		Scan(&rows).Error; err != nil {
 		return nil, err
