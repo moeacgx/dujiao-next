@@ -27,6 +27,7 @@ const (
 // PublicSKUView 公共 SKU 响应结构，在原始 SKU 基础上附加促销价
 type PublicSKUView struct {
 	models.ProductSKU
+	CostPriceAmount      models.Money  `json:"-"` // 隐藏成本价
 	PromotionPriceAmount *models.Money `json:"promotion_price_amount,omitempty"`
 	MemberPriceAmount    *models.Money `json:"member_price_amount,omitempty"`
 }
@@ -50,6 +51,7 @@ type PromotionRuleView struct {
 // PublicProductView 公共商品响应结构
 type PublicProductView struct {
 	models.Product
+	CostPriceAmount      models.Money           `json:"-"` // 隐藏成本价
 	PromotionID          *uint                  `json:"promotion_id,omitempty"`
 	PromotionName        string                 `json:"promotion_name,omitempty"`
 	PromotionType        string                 `json:"promotion_type,omitempty"`
@@ -730,6 +732,7 @@ func (h *Handler) CreateGuestOrder(c *gin.Context) {
 		return
 	}
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	response.Success(c, order)
 }
 
@@ -796,6 +799,7 @@ func (h *Handler) CreateGuestOrderAndPay(c *gin.Context) {
 		return
 	}
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 
 	// 如果未指定支付渠道，仅返回订单
 	if req.ChannelID == 0 {
@@ -907,6 +911,7 @@ func (h *Handler) ListGuestOrders(c *gin.Context) {
 			return
 		}
 		order.MaskUpstreamFulfillmentType()
+		order.StripCostPrice()
 		pagination := response.Pagination{
 			Page:      1,
 			PageSize:  1,
@@ -928,6 +933,7 @@ func (h *Handler) ListGuestOrders(c *gin.Context) {
 	}
 	for i := range orders {
 		orders[i].MaskUpstreamFulfillmentType()
+		orders[i].StripCostPrice()
 	}
 	pagination := response.BuildPagination(page, pageSize, total)
 	response.SuccessWithPage(c, orders, pagination)
@@ -960,6 +966,7 @@ func (h *Handler) GetGuestOrder(c *gin.Context) {
 		return
 	}
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	response.Success(c, order)
 }
 
@@ -990,6 +997,7 @@ func (h *Handler) GetGuestOrderByOrderNo(c *gin.Context) {
 		return
 	}
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	response.Success(c, order)
 }
 

@@ -109,6 +109,7 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	response.Success(c, order)
 }
 
@@ -161,6 +162,7 @@ func (h *Handler) CreateOrderAndPay(c *gin.Context) {
 	}
 
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 
 	// 如果未指定支付渠道且未使用余额，仅返回订单
 	if req.ChannelID == 0 && !req.UseBalance {
@@ -236,6 +238,7 @@ func (h *Handler) ListOrders(c *gin.Context) {
 
 	for i := range orders {
 		orders[i].MaskUpstreamFulfillmentType()
+		orders[i].StripCostPrice()
 	}
 	pagination := response.BuildPagination(page, pageSize, total)
 	response.SuccessWithPage(c, orders, pagination)
@@ -265,6 +268,7 @@ func (h *Handler) GetOrder(c *gin.Context) {
 	}
 
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	response.Success(c, order)
 }
 
@@ -292,6 +296,7 @@ func (h *Handler) GetOrderByOrderNo(c *gin.Context) {
 	}
 
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	response.Success(c, order)
 }
 
@@ -322,5 +327,6 @@ func (h *Handler) CancelOrder(c *gin.Context) {
 	}
 
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	response.Success(c, order)
 }

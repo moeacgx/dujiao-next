@@ -403,6 +403,7 @@ func (h *Handler) GetOrderStatus(c *gin.Context) {
 	}
 
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	respondChannelSuccess(c, buildChannelOrderDetailResponse(order, channelLocaleValue(c, c.Query("locale"))))
 }
 
@@ -442,6 +443,7 @@ func (h *Handler) GetOrderByOrderNo(c *gin.Context) {
 	}
 
 	order.MaskUpstreamFulfillmentType()
+	order.StripCostPrice()
 	respondChannelSuccess(c, buildChannelOrderDetailResponse(order, channelLocaleValue(c, c.Query("locale"))))
 }
 

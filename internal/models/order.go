@@ -49,6 +49,16 @@ func (Order) TableName() string {
 	return "orders"
 }
 
+// StripCostPrice 清除订单项中的成本价信息，避免前台用户看到成本价。
+func (o *Order) StripCostPrice() {
+	for i := range o.Items {
+		o.Items[i].CostPrice = Money{}
+	}
+	for i := range o.Children {
+		o.Children[i].StripCostPrice()
+	}
+}
+
 // MaskUpstreamFulfillmentType 将订单及子订单中的 upstream 交付类型替换为 manual，
 // 避免前台用户感知到上游对接的存在。
 func (o *Order) MaskUpstreamFulfillmentType() {
