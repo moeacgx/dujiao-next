@@ -262,6 +262,7 @@ func (s *ProcurementOrderService) SubmitToUpstream(procurementOrderID uint) erro
 		"upstream_order_id": resp.OrderID,
 		"upstream_order_no": resp.OrderNo,
 		"upstream_amount":   resp.Amount,
+		"upstream_currency": resp.Currency,
 		"error_message":     "",
 		"retry_count":       0,
 		"updated_at":        now,

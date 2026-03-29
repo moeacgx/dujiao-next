@@ -7,9 +7,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/upstream"
@@ -525,18 +528,46 @@ func (s *ProductMappingService) SyncProduct(mappingID uint) error {
 }
 
 // SyncAllStock 同步所有活跃映射的库存（供定时任务调用）
+// 使用 Redis 锁防止任务重叠执行，并发调用上游 API 提升吞吐量
 func (s *ProductMappingService) SyncAllStock() error {
+	ctx := context.Background()
+	const lockKey = "upstream:sync_stock_running"
+
+	locked, err := cache.SetNX(ctx, lockKey, "1", 30*time.Minute)
+	if err != nil {
+		logger.Warnw("sync_stock_lock_error", "error", err)
+		// Redis 不可用时降级为直接执行
+	} else if !locked {
+		logger.Debugw("sync_stock_skip_already_running")
+		return nil
+	}
+	defer cache.Del(ctx, lockKey)
+
 	mappings, err := s.mappingRepo.ListAllActive()
 	if err != nil {
 		return err
 	}
 
+	const concurrency = 5
+	sem := make(chan struct{}, concurrency)
+	var mu sync.Mutex
 	var lastErr error
+	var wg sync.WaitGroup
+
 	for _, mapping := range mappings {
-		if err := s.SyncProduct(mapping.ID); err != nil {
-			lastErr = err
-		}
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(id uint) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			if err := s.SyncProduct(id); err != nil {
+				mu.Lock()
+				lastErr = err
+				mu.Unlock()
+			}
+		}(mapping.ID)
 	}
+	wg.Wait()
 	return lastErr
 }
 
