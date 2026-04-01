@@ -56,6 +56,7 @@ type Container struct {
 	TelegramBroadcastRepo  repository.TelegramBroadcastRepository
 	MemberLevelRepo        repository.MemberLevelRepository
 	MemberLevelPriceRepo   repository.MemberLevelPriceRepository
+	MediaRepo              repository.MediaRepository
 
 	// Services
 	AuthzService              *authz.Service
@@ -95,6 +96,7 @@ type Container struct {
 	TelegramBroadcastService  *service.TelegramBroadcastService
 	MemberLevelService        *service.MemberLevelService
 	AdProxyService            *service.AdProxyService
+	MediaService              *service.MediaService
 }
 
 // NewContainer 初始化容器
@@ -170,6 +172,7 @@ func (c *Container) initRepositories() {
 	c.TelegramBroadcastRepo = repository.NewTelegramBroadcastRepository(db)
 	c.MemberLevelRepo = repository.NewMemberLevelRepository(db)
 	c.MemberLevelPriceRepo = repository.NewMemberLevelPriceRepository(db)
+	c.MediaRepo = repository.NewMediaRepository(db)
 }
 
 func (c *Container) initServices() {
@@ -295,5 +298,6 @@ func (c *Container) initServices() {
 	c.PaymentService.SetDownstreamCallbackService(c.DownstreamCallbackService)
 	c.FulfillmentService.SetDownstreamCallbackService(c.DownstreamCallbackService)
 	c.ProcurementOrderService.SetDownstreamCallbackService(c.DownstreamCallbackService)
+	c.MediaService = service.NewMediaService(c.MediaRepo)
 	c.AdProxyService = service.NewAdProxyService()
 }

@@ -216,6 +216,14 @@ type AffiliateWithdrawListFilter struct {
 	CreatedTo          *time.Time
 }
 
+// MediaListFilter 查询素材列表的过滤条件
+type MediaListFilter struct {
+	Page     int
+	PageSize int
+	Scene    string
+	Search   string // 按素材名称/原始文件名模糊搜索
+}
+
 // AffiliateProfileStatsAggregate 推广用户统计聚合结果
 type AffiliateProfileStatsAggregate struct {
 	ClickCount          int64

@@ -41,27 +41,46 @@ func NewUploadService(cfg *config.Config) *UploadService {
 	return &UploadService{cfg: cfg}
 }
 
-// SaveFile 保存上传的文件
+// UploadResult 上传结果（包含完整元数据）
+type UploadResult struct {
+	URL      string // 相对路径
+	Filename string // 原始文件名
+	MimeType string
+	Size     int64
+	Width    int
+	Height   int
+}
+
+// SaveFile 保存上传的文件（保留原签名兼容性）
 func (s *UploadService) SaveFile(file *multipart.FileHeader, scene string) (string, error) {
+	result, err := s.SaveFileWithMeta(file, scene)
+	if err != nil {
+		return "", err
+	}
+	return result.URL, nil
+}
+
+// SaveFileWithMeta 保存上传的文件并返回完整元数据
+func (s *UploadService) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*UploadResult, error) {
 	normalizedScene := normalizeUploadScene(scene)
 
 	// 验证文件大小
 	if file.Size > s.cfg.Upload.MaxSize {
-		return "", fmt.Errorf("文件大小超过限制（最大 %d MB）", s.cfg.Upload.MaxSize/1024/1024)
+		return nil, fmt.Errorf("文件大小超过限制（最大 %d MB）", s.cfg.Upload.MaxSize/1024/1024)
 	}
 
 	// 获取文件扩展名
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if normalizedScene != "telegram" && len(s.cfg.Upload.AllowedExtensions) > 0 {
 		if ext == "" || !isAllowedExtension(ext, s.cfg.Upload.AllowedExtensions) {
-			return "", fmt.Errorf("文件扩展名不被允许: %s", ext)
+			return nil, fmt.Errorf("文件扩展名不被允许: %s", ext)
 		}
 	}
 
 	// 验证文件类型
 	src, err := file.Open()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer src.Close()
 
@@ -69,10 +88,10 @@ func (s *UploadService) SaveFile(file *multipart.FileHeader, scene string) (stri
 	buffer := make([]byte, 512)
 	_, err = src.Read(buffer)
 	if err != nil && err != io.EOF {
-		return "", err
+		return nil, err
 	}
 	if _, err := src.Seek(0, 0); err != nil { // 重置文件读取位置
-		return "", err
+		return nil, err
 	}
 
 	contentType := http.DetectContentType(buffer)
@@ -89,45 +108,48 @@ func (s *UploadService) SaveFile(file *multipart.FileHeader, scene string) (stri
 			}
 		}
 		if !allowed {
-			return "", fmt.Errorf("文件类型不被允许: %s", contentType)
+			return nil, fmt.Errorf("文件类型不被允许: %s", contentType)
 		}
 	}
 
+	var imgWidth, imgHeight int
 	if strings.HasPrefix(contentType, "image/") && contentType != "image/svg+xml" {
 		if _, err := src.Seek(0, 0); err != nil {
-			return "", err
+			return nil, err
 		}
 		width, height, err := decodeImageDimensions(src, contentType)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
+		imgWidth = width
+		imgHeight = height
 		if s.cfg.Upload.MaxWidth > 0 && width > s.cfg.Upload.MaxWidth {
-			return "", fmt.Errorf("图片宽度超过限制（最大 %d）", s.cfg.Upload.MaxWidth)
+			return nil, fmt.Errorf("图片宽度超过限制（最大 %d）", s.cfg.Upload.MaxWidth)
 		}
 		if s.cfg.Upload.MaxHeight > 0 && height > s.cfg.Upload.MaxHeight {
-			return "", fmt.Errorf("图片高度超过限制（最大 %d）", s.cfg.Upload.MaxHeight)
+			return nil, fmt.Errorf("图片高度超过限制（最大 %d）", s.cfg.Upload.MaxHeight)
 		}
 	}
 
 	// SVG 安全检查：禁止嵌入脚本和外部引用
 	if contentType == "image/svg+xml" {
 		if _, err := src.Seek(0, 0); err != nil {
-			return "", err
+			return nil, err
 		}
 		svgData, err := io.ReadAll(src)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if err := validateSVGSafety(svgData); err != nil {
-			return "", err
+			return nil, err
 		}
 		if _, err := src.Seek(0, 0); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
 	if _, err := src.Seek(0, 0); err != nil {
-		return "", err
+		return nil, err
 	}
 	// 生成唯一文件名
 	filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
@@ -138,23 +160,29 @@ func (s *UploadService) SaveFile(file *multipart.FileHeader, scene string) (stri
 
 	// 确保上传目录存在
 	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// 保存文件
 	dst, err := os.Create(savePath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer dst.Close()
 
 	_, err = io.Copy(dst, src)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// 返回相对路径，由前端根据环境配置拼接完整 URL
-	return fmt.Sprintf("/uploads/%s/%s/%s/%s", normalizedScene, year, month, filename), nil
+	return &UploadResult{
+		URL:      fmt.Sprintf("/uploads/%s/%s/%s/%s", normalizedScene, year, month, filename),
+		Filename: file.Filename,
+		MimeType: contentType,
+		Size:     file.Size,
+		Width:    imgWidth,
+		Height:   imgHeight,
+	}, nil
 }
 
 func normalizeUploadScene(raw string) string {

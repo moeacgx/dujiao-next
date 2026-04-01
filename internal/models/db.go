@@ -146,6 +146,7 @@ func AutoMigrate() error {
 		&TelegramBroadcast{},
 		&MemberLevel{},
 		&MemberLevelPrice{},
+		&Media{},
 	); err != nil {
 		return err
 	}
