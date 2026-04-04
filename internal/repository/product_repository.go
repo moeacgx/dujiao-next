@@ -89,8 +89,8 @@ func (r *GormProductRepository) List(filter ProductListFilter) ([]models.Product
 		query = query.Where("updated_at > ?", *filter.UpdatedAfter)
 	}
 
-	manualStockStatus := strings.ToLower(strings.TrimSpace(filter.ManualStockStatus))
-	query = applyManualStockStatusFilter(query, manualStockStatus)
+	stockStatus := strings.ToLower(strings.TrimSpace(filter.StockStatus))
+	query = applyStockStatusFilter(query, stockStatus, filter.LowStockThreshold)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -106,9 +106,12 @@ func (r *GormProductRepository) List(filter ProductListFilter) ([]models.Product
 	return products, total, nil
 }
 
-func applyManualStockStatusFilter(query *gorm.DB, status string) *gorm.DB {
+func applyStockStatusFilter(query *gorm.DB, status string, lowStockThreshold int) *gorm.DB {
 	if query == nil || status == "" {
 		return query
+	}
+	if lowStockThreshold < 0 {
+		lowStockThreshold = 0
 	}
 
 	// manual 库存子查询
@@ -125,29 +128,29 @@ func applyManualStockStatusFilter(query *gorm.DB, status string) *gorm.DB {
 
 	switch status {
 	case "low":
-		// manual: 非无限且剩余 <= 0 | auto: 可用卡密 = 0 | upstream: 非无限且库存和 = 0
+		// manual: 非无限且剩余 <= 0 | auto: 可用卡密位于 [0, 低库存阈值] | upstream: 非无限且库存和 = 0
 		condition := fmt.Sprintf("("+
 			"(fulfillment_type = 'manual' AND (((%s) AND NOT (%s) AND (%s) <= 0) OR (NOT (%s) AND manual_stock_total = 0)))"+
-			" OR (fulfillment_type = 'auto' AND (%s) = 0)"+
+			" OR (fulfillment_type = 'auto' AND (%s) >= 0 AND (%s) <= ?)"+
 			" OR (fulfillment_type = 'upstream' AND NOT (%s) AND (%s) = 0)"+
 			")",
 			manualActiveSKUExists, manualUnlimitedSKUExists, manualSKURemaining, manualActiveSKUExists,
-			autoStockCount,
+			autoStockCount, autoStockCount,
 			upstreamUnlimitedExists, upstreamStockSum,
 		)
-		return query.Where(condition)
+		return query.Where(condition, lowStockThreshold)
 	case "normal":
-		// manual: 非无限且剩余 > 0 | auto: 可用卡密 > 0 | upstream: 非无限且库存和 > 0
+		// manual: 非无限且剩余 > 0 | auto: 可用卡密 > 低库存阈值 | upstream: 非无限且库存和 > 0
 		condition := fmt.Sprintf("("+
 			"(fulfillment_type = 'manual' AND (((%s) AND NOT (%s) AND (%s) > 0) OR (NOT (%s) AND manual_stock_total > 0)))"+
-			" OR (fulfillment_type = 'auto' AND (%s) > 0)"+
+			" OR (fulfillment_type = 'auto' AND (%s) > ?)"+
 			" OR (fulfillment_type = 'upstream' AND NOT (%s) AND (%s) > 0)"+
 			")",
 			manualActiveSKUExists, manualUnlimitedSKUExists, manualSKURemaining, manualActiveSKUExists,
 			autoStockCount,
 			upstreamUnlimitedExists, upstreamStockSum,
 		)
-		return query.Where(condition)
+		return query.Where(condition, lowStockThreshold)
 	case "unlimited":
 		// manual: 有无限 SKU | upstream: 有无限库存的映射
 		condition := fmt.Sprintf("("+

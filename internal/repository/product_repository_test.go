@@ -21,8 +21,15 @@ func setupProductRepositoryTest(t *testing.T) (*GormProductRepository, *gorm.DB)
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Product{}, &models.ProductSKU{}); err != nil {
-		t.Fatalf("migrate product/sku failed: %v", err)
+	if err := db.AutoMigrate(
+		&models.Product{},
+		&models.ProductSKU{},
+		&models.CardSecret{},
+		&models.SiteConnection{},
+		&models.ProductMapping{},
+		&models.SKUMapping{},
+	); err != nil {
+		t.Fatalf("migrate product/sku/card_secret/mappings failed: %v", err)
 	}
 	return NewProductRepository(db), db
 }
@@ -69,6 +76,38 @@ func createManualSKU(t *testing.T, db *gorm.DB, productID uint, code string, tot
 		}
 	}
 	return sku
+}
+
+func createAutoProduct(t *testing.T, repo *GormProductRepository, slug string) *models.Product {
+	t.Helper()
+	product := &models.Product{
+		CategoryID:      1,
+		Slug:            slug,
+		TitleJSON:       models.JSON{"zh-CN": "自动发货商品"},
+		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PurchaseType:    constants.ProductPurchaseMember,
+		FulfillmentType: constants.FulfillmentTypeAuto,
+		IsActive:        true,
+	}
+	if err := repo.Create(product); err != nil {
+		t.Fatalf("create auto product failed: %v", err)
+	}
+	return product
+}
+
+func createAvailableCardSecrets(t *testing.T, db *gorm.DB, productID uint, count int) {
+	t.Helper()
+	for i := 0; i < count; i++ {
+		secret := &models.CardSecret{
+			ProductID: productID,
+			SKUID:     0,
+			Secret:    fmt.Sprintf("AUTO-SECRET-%d-%d", productID, i),
+			Status:    models.CardSecretStatusAvailable,
+		}
+		if err := db.Create(secret).Error; err != nil {
+			t.Fatalf("create card secret failed: %v", err)
+		}
+	}
 }
 
 func TestManualStockReserveReleaseConsumeLifecycle(t *testing.T) {
@@ -203,7 +242,8 @@ func TestListManualStockStatusUsesActiveSKURemaining(t *testing.T) {
 		products, _, err := repo.List(ProductListFilter{
 			Page:              1,
 			PageSize:          100,
-			ManualStockStatus: status,
+			StockStatus:       status,
+			LowStockThreshold: 5,
 		})
 		if err != nil {
 			t.Fatalf("list products by status=%s failed: %v", status, err)
@@ -244,6 +284,52 @@ func TestListManualStockStatusUsesActiveSKURemaining(t *testing.T) {
 		normalByFallback.Slug:    false,
 		lowBySKU.Slug:            false,
 		lowByFallback.Slug:       false,
+	})
+}
+
+func TestListStockStatusAutoUsesLowStockThreshold(t *testing.T) {
+	repo, db := setupProductRepositoryTest(t)
+
+	createAutoProduct(t, repo, "auto-low-0")
+	low3 := createAutoProduct(t, repo, "auto-low-3")
+	normal6 := createAutoProduct(t, repo, "auto-normal-6")
+
+	createAvailableCardSecrets(t, db, low3.ID, 3)
+	createAvailableCardSecrets(t, db, normal6.ID, 6)
+
+	checkSlugs := func(status string, expected map[string]bool) {
+		products, _, err := repo.List(ProductListFilter{
+			Page:              1,
+			PageSize:          100,
+			StockStatus:       status,
+			LowStockThreshold: 5,
+		})
+		if err != nil {
+			t.Fatalf("list products by status=%s failed: %v", status, err)
+		}
+
+		got := make(map[string]bool, len(products))
+		for _, item := range products {
+			got[item.Slug] = true
+		}
+
+		for slug, want := range expected {
+			if got[slug] != want {
+				t.Fatalf("status=%s expect slug=%s present=%v got=%v", status, slug, want, got[slug])
+			}
+		}
+	}
+
+	checkSlugs("low", map[string]bool{
+		"auto-low-0":    true,
+		"auto-low-3":    true,
+		"auto-normal-6": false,
+	})
+
+	checkSlugs("normal", map[string]bool{
+		"auto-low-0":    false,
+		"auto-low-3":    false,
+		"auto-normal-6": true,
 	})
 }
 

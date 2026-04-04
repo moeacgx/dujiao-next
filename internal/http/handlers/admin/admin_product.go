@@ -23,9 +23,13 @@ func (h *Handler) GetAdminProducts(c *gin.Context) {
 	categoryID := c.Query("category_id")
 	search := c.Query("search")
 	fulfillmentType := strings.TrimSpace(c.Query("fulfillment_type"))
-	manualStockStatus := c.Query("manual_stock_status")
+	stockStatus := c.Query("stock_status")
+	if stockStatus == "" {
+		stockStatus = c.Query("stock_staus")
+	}
 
-	products, total, err := h.ProductService.ListAdmin(categoryID, search, fulfillmentType, manualStockStatus, page, pageSize)
+	lowStockThreshold := h.SettingService.GetDashboardLowStockThreshold()
+	products, total, err := h.ProductService.ListAdmin(categoryID, search, fulfillmentType, stockStatus, lowStockThreshold, page, pageSize)
 	if err != nil {
 		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return

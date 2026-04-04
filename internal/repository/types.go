@@ -20,7 +20,8 @@ type ProductListFilter struct {
 	CategoryIDs       []uint
 	Search            string
 	FulfillmentType   string
-	ManualStockStatus string
+	StockStatus       string
+	LowStockThreshold int // 低库存阈值
 	OnlyActive        bool
 	WithCategory      bool
 	UpdatedAfter      *time.Time // 仅返回此时间之后更新的商品
