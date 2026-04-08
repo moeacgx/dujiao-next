@@ -189,3 +189,29 @@ func TestSendTextEmailSkipTelegramPlaceholder(t *testing.T) {
 		t.Fatalf("sendTextEmail() should skip telegram placeholder email, got %v", err)
 	}
 }
+
+func TestBuildOrderStatusContentFromTemplateIncludesSiteBrand(t *testing.T) {
+	tmpl := OrderEmailTemplateDefaultSetting()
+	tmpl.Templates.Paid.ZHCN.Subject = "订单通知 {{site_name}}"
+	tmpl.Templates.Paid.ZHCN.Body = "订单号：{{order_no}}\n站点：{{site_name}} {{site_url}}"
+
+	input := OrderStatusEmailInput{
+		OrderNo:         "DJ-SITE-001",
+		Status:          "paid",
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Currency:        "CNY",
+		SiteName:        " 示例站点 ",
+		SiteURL:         " https://example.com/shop ",
+		IsGuest:         false,
+		FulfillmentInfo: "",
+	}
+
+	subject, body := buildOrderStatusContentFromTemplate(input, i18n.LocaleZH, tmpl)
+
+	if !strings.Contains(subject, "示例站点") {
+		t.Fatalf("subject should contain site_name, got: %s", subject)
+	}
+	if !strings.Contains(body, "站点：示例站点 https://example.com/shop") {
+		t.Fatalf("body should contain site_name and site_url, got: %s", body)
+	}
+}

@@ -104,71 +104,71 @@ func OrderEmailTemplateDefaultSetting() OrderEmailTemplateSetting {
 			Default: OrderEmailSceneTemplate{
 				ZHCN: OrderEmailLocalizedTemplate{
 					Subject: "订单状态更新：{{status}}",
-					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n感谢您的购买。",
+					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n感谢您的购买。\n\n{{site_name}} 的网址：{{site_url}}",
 				},
 				ZHTW: OrderEmailLocalizedTemplate{
 					Subject: "訂單狀態更新：{{status}}",
-					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n感謝您的購買。",
+					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n感謝您的購買。\n\n{{site_name}} 的網址：{{site_url}}",
 				},
 				ENUS: OrderEmailLocalizedTemplate{
 					Subject: "Order status updated: {{status}}",
-					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nThank you for your purchase.",
+					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nThank you for your purchase.\n\n{{site_name}}'s Site URL: {{site_url}}",
 				},
 			},
 			Paid: OrderEmailSceneTemplate{
 				ZHCN: OrderEmailLocalizedTemplate{
 					Subject: "订单状态更新：{{status}}",
-					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n我们已收到您的付款，将尽快完成交付。",
+					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n我们已收到您的付款，将尽快完成交付。\n\n{{site_name}} 的网址：{{site_url}}",
 				},
 				ZHTW: OrderEmailLocalizedTemplate{
 					Subject: "訂單狀態更新：{{status}}",
-					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n已收到付款，將盡快完成交付。",
+					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n已收到付款，將盡快完成交付。\n\n{{site_name}} 的網址：{{site_url}}",
 				},
 				ENUS: OrderEmailLocalizedTemplate{
 					Subject: "Order status updated: {{status}}",
-					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nWe have received your payment and will deliver soon.",
+					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nWe have received your payment and will deliver soon.\n\n{{site_name}}'s Site URL: {{site_url}}",
 				},
 			},
 			Delivered: OrderEmailSceneTemplate{
 				ZHCN: OrderEmailLocalizedTemplate{
 					Subject: "订单状态更新：{{status}}",
-					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n交付已完成，感谢您的购买。",
+					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n交付已完成，感谢您的购买。\n\n{{site_name}} 的网址：{{site_url}}",
 				},
 				ZHTW: OrderEmailLocalizedTemplate{
 					Subject: "訂單狀態更新：{{status}}",
-					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n交付已完成，感謝您的購買。",
+					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n交付已完成，感謝您的購買。\n\n{{site_name}} 的網址：{{site_url}}",
 				},
 				ENUS: OrderEmailLocalizedTemplate{
 					Subject: "Order status updated: {{status}}",
-					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nDelivery completed. Thank you for your purchase.",
+					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nDelivery completed. Thank you for your purchase.\n\n{{site_name}}'s Site URL: {{site_url}}",
 				},
 			},
 			DeliveredWithContent: OrderEmailSceneTemplate{
 				ZHCN: OrderEmailLocalizedTemplate{
 					Subject: "订单状态更新：{{status}}",
-					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n交付内容：\n{{fulfillment_info}}\n\n感谢您的购买。",
+					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n交付内容：\n{{fulfillment_info}}\n\n感谢您的购买。\n\n{{site_name}} 的网址：{{site_url}}",
 				},
 				ZHTW: OrderEmailLocalizedTemplate{
 					Subject: "訂單狀態更新：{{status}}",
-					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n交付內容：\n{{fulfillment_info}}\n\n感謝您的購買。",
+					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n交付內容：\n{{fulfillment_info}}\n\n感謝您的購買。\n\n{{site_name}} 的網址：{{site_url}}",
 				},
 				ENUS: OrderEmailLocalizedTemplate{
 					Subject: "Order status updated: {{status}}",
-					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nDelivery content:\n{{fulfillment_info}}\n\nThank you for your purchase.",
+					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nDelivery content:\n{{fulfillment_info}}\n\nThank you for your purchase.\n\n{{site_name}}'s Site URL: {{site_url}}",
 				},
 			},
 			Canceled: OrderEmailSceneTemplate{
 				ZHCN: OrderEmailLocalizedTemplate{
 					Subject: "订单状态更新：{{status}}",
-					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n订单已取消，如有疑问请联系管理员。",
+					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n订单已取消，如有疑问请联系管理员。\n\n{{site_name}} 的网址：{{site_url}}",
 				},
 				ZHTW: OrderEmailLocalizedTemplate{
 					Subject: "訂單狀態更新：{{status}}",
-					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n訂單已取消，如有疑問請聯絡管理員。",
+					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n訂單已取消，如有疑問請聯絡管理員。\n\n{{site_name}} 的網址：{{site_url}}",
 				},
 				ENUS: OrderEmailLocalizedTemplate{
 					Subject: "Order status updated: {{status}}",
-					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nThe order has been canceled. Please contact admin if needed.",
+					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nThe order has been canceled. Please contact admin if needed.\n\n{{site_name}}'s Site URL: {{site_url}}",
 				},
 			},
 		},

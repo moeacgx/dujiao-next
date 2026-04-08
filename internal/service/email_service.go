@@ -47,6 +47,8 @@ type OrderStatusEmailInput struct {
 	Status            string
 	Amount            models.Money
 	Currency          string
+	SiteName          string
+	SiteURL           string
 	FulfillmentInfo   string
 	IsGuest           bool
 	AttachmentName    string // 非空时表示交付内容以附件形式发送
@@ -109,6 +111,8 @@ func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale str
 		"status":           statusLabel,
 		"amount":           input.Amount.String(),
 		"currency":         strings.TrimSpace(input.Currency),
+		"site_name":        strings.TrimSpace(input.SiteName),
+		"site_url":         strings.TrimSpace(input.SiteURL),
 		"fulfillment_info": strings.TrimSpace(input.FulfillmentInfo),
 	}
 

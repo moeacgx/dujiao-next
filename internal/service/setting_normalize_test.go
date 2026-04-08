@@ -30,6 +30,39 @@ func TestUpdateOrderSettingNormalized(t *testing.T) {
 	}
 }
 
+func TestGetSiteBrand(t *testing.T) {
+	repo := newMockSettingRepo()
+	svc := NewSettingService(repo)
+
+	repo.store[constants.SettingKeySiteConfig] = map[string]interface{}{
+		"brand": map[string]interface{}{
+			"site_name": "  Demo Shop  ",
+			"site_url":  "  https://example.com/path/  ",
+		},
+	}
+	brand, err := svc.GetSiteBrand()
+	if err != nil {
+		t.Fatalf("get site brand failed: %v", err)
+	}
+	if brand.SiteName != "Demo Shop" {
+		t.Fatalf("unexpected site name: %q", brand.SiteName)
+	}
+	if brand.SiteURL != "https://example.com/path" {
+		t.Fatalf("unexpected site url: %q", brand.SiteURL)
+	}
+
+	repo.store[constants.SettingKeySiteConfig] = map[string]interface{}{
+		"brand": map[string]interface{}{},
+	}
+	brand, err = svc.GetSiteBrand()
+	if err != nil {
+		t.Fatalf("get site brand with missing field failed: %v", err)
+	}
+	if brand.SiteName != "" || brand.SiteURL != "" {
+		t.Fatalf("expected empty site brand, got %+v", brand)
+	}
+}
+
 func TestUpdateSiteSettingNormalized(t *testing.T) {
 	repo := newMockSettingRepo()
 	svc := NewSettingService(repo)
@@ -37,6 +70,7 @@ func TestUpdateSiteSettingNormalized(t *testing.T) {
 	result, err := svc.Update(constants.SettingKeySiteConfig, map[string]interface{}{
 		"brand": map[string]interface{}{
 			"site_name": 123,
+			"site_url":  "  https://example.com/path/  ",
 		},
 		"contact": map[string]interface{}{
 			"telegram": "  https://t.me/demo  ",
@@ -129,6 +163,9 @@ func TestUpdateSiteSettingNormalized(t *testing.T) {
 	}
 	if brand["site_name"] != "" {
 		t.Fatalf("unexpected brand.site_name: %v", brand["site_name"])
+	}
+	if brand["site_url"] != "https://example.com/path" {
+		t.Fatalf("unexpected brand.site_url: %v", brand["site_url"])
 	}
 
 	contact, ok := result["contact"].(map[string]interface{})
@@ -287,6 +324,9 @@ func TestUpdateSiteSettingNormalizedDefaultAbout(t *testing.T) {
 		t.Fatalf("invalid brand payload type: %T", result["brand"])
 	}
 	if brand["site_name"] != "" {
+		t.Fatalf("unexpected default brand payload: %+v", brand)
+	}
+	if brand["site_url"] != "" {
 		t.Fatalf("unexpected default brand payload: %+v", brand)
 	}
 	scripts, ok := result["scripts"].([]interface{})

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"strings"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -9,6 +11,12 @@ import (
 // SettingService 设置业务服务
 type SettingService struct {
 	repo repository.SettingRepository
+}
+
+// SiteBrand 站点品牌信息
+type SiteBrand struct {
+	SiteName string
+	SiteURL  string
 }
 
 // NewSettingService 创建设置服务
@@ -142,6 +150,32 @@ func (s *SettingService) GetSiteCurrency(defaultValue string) (string, error) {
 		return fallback, nil
 	}
 	return normalizeSiteCurrency(raw), nil
+}
+
+// GetSiteBrand 获取站点品牌配置（brand.site_name / brand.site_url）
+func (s *SettingService) GetSiteBrand() (SiteBrand, error) {
+	if s == nil {
+		return SiteBrand{}, nil
+	}
+	value, err := s.GetByKey(constants.SettingKeySiteConfig)
+	if err != nil {
+		return SiteBrand{}, err
+	}
+	if value == nil {
+		return SiteBrand{}, nil
+	}
+	rawBrand, ok := value["brand"]
+	if !ok || rawBrand == nil {
+		return SiteBrand{}, nil
+	}
+	brand, ok := rawBrand.(map[string]interface{})
+	if !ok || brand == nil {
+		return SiteBrand{}, nil
+	}
+	return SiteBrand{
+		SiteName: normalizeSettingText(brand["site_name"]),
+		SiteURL:  strings.TrimRight(normalizeSettingText(brand["site_url"]), "/"),
+	}, nil
 }
 
 // GetWalletOnlyPayment 获取是否仅允许钱包余额支付

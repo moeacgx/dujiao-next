@@ -122,11 +122,22 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		status = order.Status
 	}
 	payloadText := buildOrderFulfillmentEmailPayload(order)
+	siteBrand := service.SiteBrand{}
+	if c.SettingService != nil {
+		resolvedSiteBrand, siteErr := c.SettingService.GetSiteBrand()
+		if siteErr != nil {
+			logger.Warnw("worker_order_status_email_load_site_brand_failed", "order_id", order.ID, "error", siteErr)
+		} else {
+			siteBrand = resolvedSiteBrand
+		}
+	}
 	input := service.OrderStatusEmailInput{
 		OrderNo:  order.OrderNo,
 		Status:   status,
 		Amount:   order.TotalAmount,
 		Currency: order.Currency,
+		SiteName: siteBrand.SiteName,
+		SiteURL:  siteBrand.SiteURL,
 		IsGuest:  order.UserID == 0,
 	}
 	if models.ShouldAttachFulfillmentPayload(payloadText) {
