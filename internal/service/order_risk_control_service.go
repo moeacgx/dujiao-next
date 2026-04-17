@@ -18,10 +18,11 @@ import (
 )
 
 var (
-	ErrRiskIPBlacklisted        = errors.New("risk: ip blacklisted")
-	ErrRiskEmailBlacklisted     = errors.New("risk: email blacklisted")
-	ErrRiskTooManyPendingOrders = errors.New("risk: too many pending orders")
-	ErrRiskOrderRateLimited     = errors.New("risk: order rate limited")
+	ErrRiskIPBlacklisted          = errors.New("risk: ip blacklisted")
+	ErrRiskEmailBlacklisted       = errors.New("risk: email blacklisted")
+	ErrRiskEmailDomainBlacklisted = errors.New("risk: email domain blacklisted")
+	ErrRiskTooManyPendingOrders   = errors.New("risk: too many pending orders")
+	ErrRiskOrderRateLimited       = errors.New("risk: order rate limited")
 )
 
 // RiskRateLimitedError 携带 Retry-After 秒数的频率限制错误
@@ -112,12 +113,19 @@ func (s *OrderRiskControlService) CheckOrderAllowed(input RiskCheckInput) error 
 		}
 	}
 
-	// 3. 并发待支付订单数检查
+	// 3. 邮箱域名黑名单检查（游客订单）
+	if input.IsGuest && input.GuestEmail != "" && len(cfg.EmailDomainBlacklist) > 0 {
+		if isEmailDomainBlacklisted(input.GuestEmail, cfg.EmailDomainBlacklist) {
+			return ErrRiskEmailDomainBlacklisted
+		}
+	}
+
+	// 4. 并发待支付订单数检查
 	if err := s.checkPendingOrderLimits(input, cfg); err != nil {
 		return err
 	}
 
-	// 4. 下单频率检查
+	// 5. 下单频率检查
 	if cfg.OrderRateLimit.Enabled {
 		if err := s.checkOrderRateLimit(input, cfg.OrderRateLimit); err != nil {
 			return err

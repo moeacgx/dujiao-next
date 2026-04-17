@@ -54,6 +54,7 @@ func concatMappedHandlerErrors(groups ...[]mappedHandlerError) []mappedHandlerEr
 var orderRiskControlErrorRules = []mappedHandlerError{
 	{target: service.ErrRiskIPBlacklisted, code: response.CodeForbidden, key: "error.risk_ip_blacklisted"},
 	{target: service.ErrRiskEmailBlacklisted, code: response.CodeForbidden, key: "error.risk_email_blacklisted"},
+	{target: service.ErrRiskEmailDomainBlacklisted, code: response.CodeForbidden, key: "error.risk_email_domain_blacklisted"},
 	{target: service.ErrRiskTooManyPendingOrders, code: response.CodeTooManyRequests, key: "error.risk_too_many_pending_orders"},
 	{target: service.ErrRiskOrderRateLimited, code: response.CodeTooManyRequests, key: "error.risk_order_rate_limited"},
 }

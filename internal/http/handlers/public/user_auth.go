@@ -91,6 +91,8 @@ func (h *Handler) SendUserVerifyCode(c *gin.Context) {
 			shared.RespondError(c, response.CodeBadRequest, "error.verify_purpose_invalid", nil)
 		case errors.Is(err, service.ErrEmailExists):
 			shared.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
+		case errors.Is(err, service.ErrRiskEmailDomainBlacklisted):
+			shared.RespondError(c, response.CodeForbidden, "error.risk_email_domain_blacklisted", nil)
 		case errors.Is(err, service.ErrNotFound):
 			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		case errors.Is(err, service.ErrVerifyCodeTooFrequent):
@@ -150,6 +152,8 @@ func (h *Handler) UserRegister(c *gin.Context) {
 			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 		case errors.Is(err, service.ErrEmailExists):
 			shared.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
+		case errors.Is(err, service.ErrRiskEmailDomainBlacklisted):
+			shared.RespondError(c, response.CodeForbidden, "error.risk_email_domain_blacklisted", nil)
 		case errors.Is(err, service.ErrVerifyCodeInvalid):
 			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_invalid", nil)
 		case errors.Is(err, service.ErrVerifyCodeExpired):

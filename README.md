@@ -29,3 +29,8 @@ The default health check endpoint is:
 ## Online Documentation
 
 - https://dujiao-next.com
+
+## Secondary Development / 二开说明
+
+This fork keeps production custom patches while staying close to upstream.
+See `SECONDARY_DEVELOPMENT.md` for the current customization list and upstream sync notes.

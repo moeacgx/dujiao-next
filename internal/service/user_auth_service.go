@@ -121,9 +121,6 @@ func (s *UserAuthService) ParseUserJWT(tokenString string) (*UserJWTClaims, erro
 
 // SendVerifyCode 发送邮箱验证码
 func (s *UserAuthService) SendVerifyCode(email, purpose, locale string) error {
-	if s.emailService == nil {
-		return ErrEmailServiceNotConfigured
-	}
 	normalized, err := normalizeEmail(email)
 	if err != nil {
 		return err
@@ -133,6 +130,9 @@ func (s *UserAuthService) SendVerifyCode(email, purpose, locale string) error {
 	}
 
 	if purpose == constants.VerifyPurposeRegister {
+		if err := s.ensureRegistrationEmailAllowed(normalized); err != nil {
+			return err
+		}
 		exist, err := s.userRepo.GetByEmail(normalized)
 		if err != nil {
 			return err
@@ -140,6 +140,10 @@ func (s *UserAuthService) SendVerifyCode(email, purpose, locale string) error {
 		if exist != nil {
 			return ErrEmailExists
 		}
+	}
+
+	if s.emailService == nil {
+		return ErrEmailServiceNotConfigured
 	}
 
 	if purpose == constants.VerifyPurposeReset {
@@ -178,6 +182,9 @@ func (s *UserAuthService) Register(email, password, code string, agreementAccept
 	}
 	normalized, err := normalizeEmail(email)
 	if err != nil {
+		return nil, "", time.Time{}, err
+	}
+	if err := s.ensureRegistrationEmailAllowed(normalized); err != nil {
 		return nil, "", time.Time{}, err
 	}
 	if err := validatePassword(s.cfg.Security.PasswordPolicy, password); err != nil {
@@ -236,6 +243,23 @@ func (s *UserAuthService) Register(email, password, code string, agreementAccept
 	}
 
 	return user, token, expiresAt, nil
+}
+
+func (s *UserAuthService) ensureRegistrationEmailAllowed(email string) error {
+	if s == nil || s.settingService == nil {
+		return nil
+	}
+	cfg, err := s.settingService.GetOrderRiskControlConfig()
+	if err != nil {
+		return err
+	}
+	if !cfg.Enabled || len(cfg.EmailDomainBlacklist) == 0 {
+		return nil
+	}
+	if isEmailDomainBlacklisted(email, cfg.EmailDomainBlacklist) {
+		return ErrRiskEmailDomainBlacklisted
+	}
+	return nil
 }
 
 // Login 用户登录

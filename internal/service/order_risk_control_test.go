@@ -88,6 +88,25 @@ func TestNormalizeOrderRiskControlConfig_EmailNormalization(t *testing.T) {
 	}
 }
 
+func TestNormalizeOrderRiskControlConfig_EmailDomainNormalization(t *testing.T) {
+	cfg := NormalizeOrderRiskControlConfig(OrderRiskControlConfig{
+		EmailDomainBlacklist: []string{
+			"  @Example.COM  ",
+			".mailinator.com",
+			"",
+		},
+	})
+	if len(cfg.EmailDomainBlacklist) != 2 {
+		t.Fatalf("expected 2 domains, got %d: %v", len(cfg.EmailDomainBlacklist), cfg.EmailDomainBlacklist)
+	}
+	if cfg.EmailDomainBlacklist[0] != "example.com" {
+		t.Fatalf("expected normalized domain example.com, got %q", cfg.EmailDomainBlacklist[0])
+	}
+	if cfg.EmailDomainBlacklist[1] != "mailinator.com" {
+		t.Fatalf("expected normalized domain mailinator.com, got %q", cfg.EmailDomainBlacklist[1])
+	}
+}
+
 // --- isValidIPOrCIDR 测试 ---
 
 func TestIsValidIPOrCIDR(t *testing.T) {
@@ -137,6 +156,26 @@ func TestIsIPInBlacklist(t *testing.T) {
 	for _, tc := range tests {
 		if got := svc.isIPInBlacklist(tc.ip, blacklist); got != tc.blocked {
 			t.Errorf("isIPInBlacklist(%q) = %v, want %v", tc.ip, got, tc.blocked)
+		}
+	}
+}
+
+func TestIsEmailDomainBlacklisted(t *testing.T) {
+	blacklist := []string{"example.com", "mailinator.com", "@tempmail.org"}
+	tests := []struct {
+		email   string
+		blocked bool
+	}{
+		{"user@example.com", true},
+		{"user@sub.example.com", true},
+		{"user@mailinator.com", true},
+		{"user@foo.tempmail.org", true},
+		{"user@safe.com", false},
+		{"invalid", false},
+	}
+	for _, tc := range tests {
+		if got := isEmailDomainBlacklisted(tc.email, blacklist); got != tc.blocked {
+			t.Fatalf("isEmailDomainBlacklisted(%q) = %v, want %v", tc.email, got, tc.blocked)
 		}
 	}
 }
@@ -305,6 +344,36 @@ func TestCheckOrderAllowed_EmailBlacklist(t *testing.T) {
 	}
 
 	// Non-guest should not be blocked by email blacklist
+	if err := svc.CheckOrderAllowed(RiskCheckInput{
+		UserID:   1,
+		ClientIP: "2.3.4.5",
+	}); err != nil {
+		t.Fatalf("expected nil for non-guest, got %v", err)
+	}
+}
+
+func TestCheckOrderAllowed_EmailDomainBlacklist(t *testing.T) {
+	svc := newTestRiskControlService(0, 0, 0, models.JSON{
+		"enabled":                true,
+		"email_domain_blacklist": []interface{}{"example.com", "@mailinator.com"},
+	})
+
+	if err := svc.CheckOrderAllowed(RiskCheckInput{
+		IsGuest:    true,
+		GuestEmail: "SPAM@sub.example.com",
+		ClientIP:   "2.3.4.5",
+	}); err != ErrRiskEmailDomainBlacklisted {
+		t.Fatalf("expected ErrRiskEmailDomainBlacklisted, got %v", err)
+	}
+
+	if err := svc.CheckOrderAllowed(RiskCheckInput{
+		IsGuest:    true,
+		GuestEmail: "normal@safe.com",
+		ClientIP:   "2.3.4.5",
+	}); err != nil {
+		t.Fatalf("expected nil for safe guest email domain, got %v", err)
+	}
+
 	if err := svc.CheckOrderAllowed(RiskCheckInput{
 		UserID:   1,
 		ClientIP: "2.3.4.5",

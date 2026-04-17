@@ -26,6 +26,7 @@ type OrderRiskControlConfig struct {
 	OrderRateLimit                OrderRateLimitConfig `json:"order_rate_limit"`
 	IPBlacklist                   []string             `json:"ip_blacklist"`
 	EmailBlacklist                []string             `json:"email_blacklist"`
+	EmailDomainBlacklist          []string             `json:"email_domain_blacklist"`
 }
 
 // DefaultOrderRiskControlConfig 默认风控配置
@@ -41,8 +42,9 @@ func DefaultOrderRiskControlConfig() OrderRiskControlConfig {
 			MaxRequests:   5,
 			BlockSeconds:  120,
 		},
-		IPBlacklist:    []string{},
-		EmailBlacklist: []string{},
+		IPBlacklist:          []string{},
+		EmailBlacklist:       []string{},
+		EmailDomainBlacklist: []string{},
 	}
 }
 
@@ -91,6 +93,16 @@ func NormalizeOrderRiskControlConfig(cfg OrderRiskControlConfig) OrderRiskContro
 	}
 	cfg.EmailBlacklist = cleanEmails
 
+	// 归一化邮箱域名黑名单：去空行、小写化，兼容 @example.com / .example.com 写法
+	cleanDomains := make([]string, 0, len(cfg.EmailDomainBlacklist))
+	for _, domain := range cfg.EmailDomainBlacklist {
+		domain = normalizeEmailDomainEntry(domain)
+		if domain != "" {
+			cleanDomains = append(cleanDomains, domain)
+		}
+	}
+	cfg.EmailDomainBlacklist = cleanDomains
+
 	return cfg
 }
 
@@ -100,6 +112,39 @@ func trimString(s string) string {
 
 func trimStringToLower(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
+}
+
+func normalizeEmailDomainEntry(s string) string {
+	s = trimStringToLower(s)
+	s = strings.TrimPrefix(s, "@")
+	s = strings.TrimPrefix(s, ".")
+	return s
+}
+
+func extractEmailDomain(email string) string {
+	email = trimStringToLower(email)
+	at := strings.LastIndex(email, "@")
+	if at < 0 || at == len(email)-1 {
+		return ""
+	}
+	return email[at+1:]
+}
+
+func isEmailDomainBlacklisted(email string, blacklist []string) bool {
+	domain := extractEmailDomain(email)
+	if domain == "" {
+		return false
+	}
+	for _, blocked := range blacklist {
+		blocked = normalizeEmailDomainEntry(blocked)
+		if blocked == "" {
+			continue
+		}
+		if domain == blocked || strings.HasSuffix(domain, "."+blocked) {
+			return true
+		}
+	}
+	return false
 }
 
 // isValidIPOrCIDR 校验字符串是否为有效的 IP 地址或 CIDR 表示
